@@ -1,0 +1,109 @@
+/* client/components/main/main.css */
+#debug {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  background: #555;
+  color: #fff;
+  z-index: 5;
+  padding: 1px 2px;
+}
+#content {
+  overflow-x: auto;
+  max-height: 100vh;
+}
+#list {
+  border-collapse: collapse;
+}
+#list tr[data-chunk] {
+  background: #444;
+}
+#list td {
+  text-align: center;
+  box-sizing: border-box;
+  font-size: 0.9em;
+  padding: 0.5em 0px;
+  user-select: none;
+  contain: content;
+}
+#list td:last-child {
+  padding-right: 1em;
+}
+#list .item.selected {
+  background: #00ff00;
+  color: #000;
+}
+#list .info {
+  display: inline-flex;
+  padding: 0px;
+  width: 32px;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+  font-size: 0.9em;
+}
+#list .info button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  padding: 18px 0;
+  background: transparent;
+  border: none;
+}
+#list .info span {
+  display: flex;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  position: relative;
+  background: #666;
+  color: #fff;
+  justify-content: center;
+}
+#list .icon {
+  width: 34px;
+  z-index: 1;
+  display: inline-flex;
+  position: relative;
+  grid-row: span 2 / auto;
+  align-self: flex-end;
+  padding: 0px;
+}
+#list .player {
+  display: inline-grid;
+  text-align: start;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 0px 0.25em;
+  overflow-x: visible;
+  vertical-align: top;
+}
+#list .name {
+  display: block;
+  font-weight: 700;
+  grid-column: 3 / auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  max-width: 90px;
+}
+#list .name::before {
+  display: block;
+  content: "";
+  position: absolute;
+  cursor: pointer;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+}
+#list .teams {
+  grid-column: 3 / auto;
+  display: flex;
+}
+#list .point {
+  width: 3.5em;
+  vertical-align: top;
+}

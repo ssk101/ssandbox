@@ -1,0 +1,19 @@
+{
+  "name": "ssandbox",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node ./server/index.js",
+    "build": "facade build -e ./client/index.js -n application -o build -b -p -l error",
+    "build-dev": "facade build -e ./client/index.js -n application -o build -b -p -w -l info"
+  },
+  "dependencies": {
+    "@steelskysoftware/facade-builder": "^1.0.0",
+    "@steelskysoftware/facade-client": "^1.0.0",
+    "@steelskysoftware/facade-server": "^1.0.0",
+    "@steelskysoftware/facade-toolbox": "^1.0.0"
+  },
+  "keywords": []
+}

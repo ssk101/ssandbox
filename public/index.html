@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>SSandbox</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <style>
+      @font-face {
+        font-family: 'Inter';
+        src: url('https://fonts.googleapis.com/css?family=Inter:wght@400;700&display=swap');
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        font-family: sans-serif;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        width: 100%;
+        height: 100%;
+        background: #222;
+        color: #fff;
+      }
+
+      main {
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <facade-viewport></facade-viewport>
+    <script src="application.js" type="module"></script>
+  </body>
+</html>
