@@ -1,0 +1,197 @@
+code[class*=language-],
+pre[class*=language-]
+  font-size: 13px
+  text-align: left
+  white-space: pre
+  background: 0 0
+  color: #fff
+  text-shadow: 0 -0.1em 0.2em #000
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace
+  word-spacing: normal
+  word-break: normal
+  word-wrap: normal
+  -moz-tab-size: 4
+  -o-tab-size: 4
+  tab-size: 4
+  -webkit-hyphens: none
+  -moz-hyphens: none
+  -ms-hyphens: none
+  hyphens: none
+
+@media print
+  code[class*=language-],
+  pre[class*=language-]
+    text-shadow: none
+
+:not(pre)>code[class*=language-],
+pre[class*=language-]
+  background: #4c3f33
+
+pre[class*=language-]
+  padding: 1em
+  margin: 0.5em 0
+  overflow: auto
+  border: 0.3em solid #7a6651
+  border-radius: 0.5em
+  box-shadow: 1px 1px 0.5em #000 inset
+
+:not(pre)
+  & > code[class*=language-]
+    padding: 0.15em 0.2em 0.05em
+    white-space: normal
+    border: 0.13em solid #7a6651
+    border-radius: 0.3em
+    box-shadow: 1px 1px 0.3em -0.1em #000 inset
+
+.token.cdata,
+.token.comment,
+.token.doctype,
+.token.prolog
+  color: #997f66
+
+.token
+  &.punctuation
+    opacity: 0.7
+
+  &.namespace
+    opacity: 0.7
+
+  &.italic
+    font-style: italic
+
+  &.entity
+    cursor: help
+
+  &.deleted
+    color: red
+
+.token.boolean,
+.token.constant,
+.token.number,
+.token.property,
+.token.symbol,
+.token.tag
+  color: #d1939e
+
+.token.attr-name,
+.token.builtin,
+.token.char,
+.token.inserted,
+.token.selector,
+.token.string
+  color: #bce051
+
+.language-css .token.string,
+.style .token.string,
+.token.entity,
+.token.operator,
+.token.url,
+.token.variable
+  color: #f4b73d
+
+.token.atrule,
+.token.attr-value,
+.token.keyword
+  color: #d1939e
+
+.token.important,
+.token.regex
+  color: #e90
+
+.token.bold,
+.token.important
+  font-weight: 700
+
+pre[class*=language-].line-numbers
+  position: relative
+  padding-left: 3.8em
+  counter-reset: linenumber
+
+  & > code
+    position: relative
+    white-space: inherit
+
+.line-numbers
+  .line-numbers-rows
+    position: absolute
+    top: 0
+    left: -3.8em
+    width: 3em
+    font-size: 100%
+    user-select: none
+    border-right: 1px solid #999
+    pointer-events: none
+    letter-spacing: -1px
+    -webkit-user-select: none
+    -moz-user-select: none
+    -ms-user-select: none
+
+.line-numbers-rows
+  & > span
+    display: block
+    counter-increment: linenumber
+
+    &:before
+      display: block
+      padding-right: 0.8em
+      text-align: right
+      color: #999
+      content: counter(linenumber)
+
+div
+  &.code-toolbar
+    position: relative
+
+    & > .toolbar
+      position: absolute
+      top: 0.3em
+      right: 0.2em
+      transition: opacity 0.3s ease-in-out
+      opacity: 0
+      z-index: 10
+
+      & > .toolbar-item
+        display: inline-block
+
+        & > a
+          cursor: pointer
+
+        & > button
+          padding: 0
+          line-height: normal
+          overflow: visible
+          background: 0 0
+          color: inherit
+          border: 0
+          font: inherit
+          -webkit-user-select: none
+          -moz-user-select: none
+          -ms-user-select: none
+
+    &:hover
+      & > .toolbar
+        opacity: 1
+
+    &:focus-within
+      & > .toolbar
+        opacity: 1
+
+div.code-toolbar>.toolbar>.toolbar-item>a,
+div.code-toolbar>.toolbar>.toolbar-item>button,
+div.code-toolbar>.toolbar>.toolbar-item>span
+  padding: 0 0.5em
+  font-size: 0.8em
+  background: #f5f2f0
+  background: rgba(224, 224, 224, 0.2)
+  color: #bbb
+  border-radius: 0.5em
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.2)
+
+div.code-toolbar>.toolbar>.toolbar-item>a:focus,
+div.code-toolbar>.toolbar>.toolbar-item>a:hover,
+div.code-toolbar>.toolbar>.toolbar-item>button:focus,
+div.code-toolbar>.toolbar>.toolbar-item>button:hover,
+div.code-toolbar>.toolbar>.toolbar-item>span:focus,
+div.code-toolbar>.toolbar>.toolbar-item>span:hover
+  text-decoration: none
+  color: inherit

@@ -3,17 +3,25 @@ import {
   createServer,
 } from '@steelskysoftware/facade-server'
 import { routes } from './routes.js'
+import config from '../config.js'
 
-const port = 3000
-
-const servinator = await createServer({
+const {
   port,
+  wsRoot,
+  wsNamespace,
+  wsPort,
+  useRedis = true,
+  compress = true,
+} = config
+
+const server = await createServer({
   client: true,
+  port,
   routes,
-  dataset: {},
-  src: 'application.esm.js',
+  useRedis,
+  compress,
 })
 
-servinator.on('listening', () => {
+server.on('listening', () => {
   console.log(`Listening on ${port}`)
 })

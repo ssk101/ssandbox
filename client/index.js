@@ -1,14 +1,28 @@
+import { Config } from './models/config.js'
 import { bootstrap } from '@steelskysoftware/facade-client'
 
+window.config = await Config.load()
+
+export const routes = [
+  {
+    name: 'main',
+    path: '/',
+    async component(ctx) {
+      const { default: c } = await import(`./components/list/list.js`)
+      return c
+    }
+  },
+  {
+    name: 'openai',
+    path: '/openai',
+    async component(ctx) {
+      const { default: c } = await import(`./components/openai/openai.js`)
+      return c
+    }
+  },
+]
+
 bootstrap({
-  routes: [
-    {
-      name: 'list-test',
-      path: '/',
-      async component() {
-        return import(`./components/list-test/list-test.js`)
-      }
-    },
-  ],
+  routes,
   componentPrefix: 'ss',
 })

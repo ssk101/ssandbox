@@ -13,7 +13,12 @@
     "@steelskysoftware/facade-builder": "^1.0.0",
     "@steelskysoftware/facade-client": "^1.0.0",
     "@steelskysoftware/facade-server": "^1.0.0",
-    "@steelskysoftware/facade-toolbox": "^1.0.0"
+    "@steelskysoftware/facade-sockets": "^1.0.0",
+    "@steelskysoftware/facade-toolbox": "^1.0.0",
+    "highlight.js": "^11.7.0",
+    "lodash": "^4.17.21",
+    "openai": "^3.2.1",
+    "socket.io-client": "^4.6.1"
   },
   "keywords": []
 }

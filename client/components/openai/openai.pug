@@ -1,0 +1,56 @@
+facade-select(
+  (select)=this.selectModel(e),
+  value=this.model.id
+)
+  each model in this.models
+    option(
+      [value]=model.id
+    )= model.id
+
+.inputs
+  .labelled
+    label(for='input') Input
+    textarea.input(
+      id='input',
+      placeholder='Prompt',
+      (input)=this.onInput(e),
+      autocomplete='off',
+      autocorrect='off',
+      spellcheck='false',
+    )
+
+  .labelled
+    label(for='instruction') Instruction
+    textarea.instruction(
+      id='instruction',
+      hidden=!this.isEdit,
+      placeholder='Edit instruction (e.g. "Refactor this" or "Fix spelling mistakes")',
+      autocomplete='off',
+      autocorrect='off',
+      spellcheck='false',
+    )
+
+  .buttons
+    facade-button(
+      (click)=this.submit(),
+      disabled=!this.canSubmit,
+    ) Submit
+
+    if this.isChat
+      facade-button(
+        (click)=this.clearMessageHistory(),
+      ) Clear chat history
+
+    .responding(hidden=!this.isResponding)= this.receivingResponseLabel()
+
+.previews(hidden=!this.isCode)
+  .labelled
+    label(for='preview')= `Code ${this.langFor('input') ? '(best guess: ' + this.langFor('input') + ')' : ''}`
+    pre.preview(id='preview')
+      code= this.input
+
+.labelled.response
+  label(for='response')= `Response ${this.langFor('response') ? '(best guess: ' + this.langFor('response') + ')' : ''}`
+  pre.response(id='response')
+    code.
+      Awaiting prompt...
