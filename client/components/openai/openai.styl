@@ -11,9 +11,6 @@
   grid-auto-rows: max-content
   --input-height: 400px
 
-[hidden]
-  display: none
-
 .inputs,
 .previews
   display: grid
@@ -22,7 +19,11 @@
   grid-gap: 1em
 
 .inputs
-  grid-column: 1
+  &:not([is-code='true'])
+    grid-column: span 2
+
+  &[is-code='true']
+    grid-column: 1
 
   .buttons
     display: grid
@@ -31,7 +32,12 @@
     justify-content: start
 
 .previews
-  grid-column: 2
+  &:not([is-code='true'])
+    display: none
+
+  &[is-code='true']
+    display: grid
+    grid-column: 2
 
 .labelled.response
   grid-column: span 2
@@ -60,6 +66,9 @@ textarea
   &.instruction
     height: 75px
 
+[hidden='true']
+  display: none
+
 pre
   width: 100%
   border: 1px solid #444
@@ -76,4 +85,7 @@ pre
     min-height: 150px
 
 code
-  white-space: pre
+  white-space: pre-wrap
+
+  &[is-code='true']
+    white-space: pre

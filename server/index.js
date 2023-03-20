@@ -2,17 +2,16 @@ import path from 'path'
 import {
   createServer,
 } from '@steelskysoftware/facade-server'
-import { routes } from './routes.js'
-import config from '../config.js'
+import { routes } from './routes/index.js'
+import config from './config/index.js'
+
+await import('./ws/server.js')
 
 const {
   port,
-  wsRoot,
-  wsNamespace,
-  wsPort,
-  useRedis = true,
-  compress = true,
-} = config
+  useRedis,
+  compress,
+} = config.server
 
 const server = await createServer({
   client: true,

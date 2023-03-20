@@ -5,6 +5,7 @@ import {
   Styles,
 } from '@steelskysoftware/facade-client'
 import { wait } from '@steelskysoftware/facade-toolbox'
+import { IDB } from '@steelskysoftware/facade-client/src/lib/idb.js'
 import debounce from 'lodash/debounce'
 import { OpenAI } from '../../models/openai.js'
 import IO from 'socket.io-client'
@@ -15,13 +16,9 @@ import componentCSS from './openai.styl'
 import '@steelskysoftware/facade-client/src/components/button/button.js'
 import '@steelskysoftware/facade-client/src/components/select/select.js'
 
-const { wsRoot, wsNamespace } = window.config
+const { ws } = window.config
 
-const LANGS = [
-  ''
-]
-
-const SOCKET = IO(`${wsRoot}/${wsNamespace}`, {
+const SOCKET = IO(`${ws.root}/${ws.namespace}/openai`, {
   transports: ['websocket', 'polling', 'flashsocket']
 })
 
@@ -31,13 +28,26 @@ const SOCKET = IO(`${wsRoot}/${wsNamespace}`, {
 export default class Openai extends HTMLElement {
   created() {
     this.models = []
-    this.model = {
-      id: 'code-davinci-edit-001',
-      data: {},
-    }
+    this.model = {}
   }
 
   async connected() {
+    const models = await OpenAI.load('models')
+
+    this.models = models
+
+    this.idb = await new IDB('openai')
+    const store = await this.idb.getOrCreateStore('modelSettings')
+    const selectedModel = await this.getModelSetting('model')
+    const defaultModel = this.models.filtered.find(model => model.default)
+
+    this.model = this.models
+      .filtered
+      .find(model => model.id === selectedModel) || defaultModel
+
+    await this.setModelSetting('model', this.model.id)
+    await this.loadModel(this.model.id)
+
     this.guesslang = debounce((namespace) => {
       this._guesslang(namespace)
     }, 1000)
@@ -68,17 +78,17 @@ export default class Openai extends HTMLElement {
       },
     }
 
-    this.messages = this.getMessageHistory()
+    this.messages = await this.getModelSetting('messageHistory') || []
     this.lastHighlight = Date.now() - 2000
     this.isResponding = false
     this.isGuesslanging = false
 
-    SOCKET.on('prompt:response', (response) => {
+    SOCKET.on('openai:response', (response) => {
       this.responseElement.textContent += response
       this.guesslang('response')
     })
 
-    SOCKET.on('prompt:done', (response) => {
+    SOCKET.on('openai:done', (response) => {
       this.isResponding = false
       this.render()
     })
@@ -96,19 +106,20 @@ export default class Openai extends HTMLElement {
       }
     })
 
-    const data = await OpenAI.load('models')
-    this.models = data.sort((a, b) => {
-      return a.id.localeCompare(b.id)
-    })
 
-    console.log(data)
-
-    await this.loadModel(this.model.id)
     this.render()
   }
 
   disconnected() {
     SOCKET.emit('close')
+  }
+
+  async getModelSetting(key) {
+    return this.idb.get('modelSettings', key)
+  }
+
+  async setModelSetting(key, value) {
+    return this.idb.set('modelSettings', key, value)
   }
 
   async _guesslang(namespace) {
@@ -147,12 +158,8 @@ export default class Openai extends HTMLElement {
     }
   }
 
-  getMessageHistory() {
-    return JSON.parse(localStorage.getItem('messages') || '[]')
-  }
-
   clearMessageHistory() {
-    localStorage.setItem('messages', '[]')
+    return this.setModelSetting('messageHistory', [])
     this.messages = []
   }
 
@@ -169,13 +176,39 @@ export default class Openai extends HTMLElement {
 
   async loadModel(id) {
     const data = await OpenAI.load('model', { id })
-    this.model = { id, data }
+
+    this.model = {
+      ...data,
+      ...this.models.filtered.find(model => model.id === data.id),
+    }
+
+    await this.setModelSetting('model', id)
+
+    if(this.model.personalities?.length) {
+      const personalityName = (await this.getModelSetting('personality'))
+      await this.selectPersonality(personalityName)
+    }
+
+    console.log(this.model)
+
     this.clearInstruction()
     this.render()
   }
 
   async selectModel(e) {
     await this.loadModel(e.value)
+  }
+
+  async selectPersonality(personalityName = 'default') {
+    this.model.personality = personalityName
+    await this.setModelSetting('personality', personalityName)
+    this.render()
+  }
+
+  getPersonality(personalityName) {
+    return this.model.personalities.find(personality => {
+      return personality.name === personalityName
+    })
   }
 
   onInput(e) {
@@ -208,6 +241,24 @@ export default class Openai extends HTMLElement {
         content: this.input,
       })
 
+      const system = this.messages.find(message => message.role === 'system')
+
+      if(this.model.personality) {
+        const personality = this.getPersonality(this.model.personality)
+
+        if(!system || system.content !== personality.instructions) {
+          this.messages = this.messages.filter(message => {
+            return message.role !== 'system'
+          })
+
+          this.messages.unshift({
+            role: 'system',
+            content: personality.instructions,
+          })
+        }
+
+      }
+
       payload.input = this.messages
       localStorage.setItem('messages', JSON.stringify(this.messages))
     } else {
@@ -220,7 +271,7 @@ export default class Openai extends HTMLElement {
 
     try {
       Object.assign(this.namespaces.response, { lang: null })
-      SOCKET.emit('prompt:input', payload)
+      SOCKET.emit('openai:input', payload)
     } catch (e) {
       console.error(e)
       this.render(this.isResponding = false)
@@ -257,12 +308,8 @@ export default class Openai extends HTMLElement {
     return this.input?.length && !this.isResponding
   }
 
-  get hljs() {
-    return hljs
-  }
-
   get modelTypes() {
-    return window.config.models[this.model.id].types
+    return this.model?.types || []
   }
 
   get isChat() {
@@ -275,5 +322,11 @@ export default class Openai extends HTMLElement {
 
   get isEdit() {
     return this.modelTypes.includes('edit')
+  }
+
+  get sortedModels() {
+    return this.models?.filtered?.sort((a, b) => {
+      return a.id.localeCompare(b.id)
+    }) || []
   }
 }
