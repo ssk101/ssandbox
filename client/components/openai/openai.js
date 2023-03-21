@@ -55,7 +55,7 @@ export default class Openai extends HTMLElement {
 
     const _resize = debounce(height => {
       this.shadowRoot.querySelector('pre.preview').style.height = `${height}px`
-    }, 100)
+    }, 50)
 
     new ResizeObserver((entries) => {
       _resize(entries[0].borderBoxSize[0].blockSize)

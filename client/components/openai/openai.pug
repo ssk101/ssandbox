@@ -72,7 +72,7 @@ header
 
 .group.pad.a.previews(is-code=this.isCode)
   .labelled
-    label= `Code ${this.langFor('input') ? '(best guess: ' + this.langFor('input') + ')' : ''}`
+    label= `Code preview ${this.langFor('input') ? '(best guess: ' + this.langFor('input') + ')' : ''}`
     pre.preview(id='preview')
       code(is-code=this.isCode)= this.input
 
