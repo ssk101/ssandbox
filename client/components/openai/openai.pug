@@ -1,24 +1,28 @@
 header
   .group.pad.a.options
     .group.pad.b.selects
-      facade-select(
-        (select)=this.selectModel(e.value),
-        value=this.model.id
-      )
-        each model in this.sortedModels
-          option(
-            [value]=model.id,
-            disabled=!model.enabled,
-          )= model.id
+      .labelled
+        label Model
+        facade-select(
+          (select)=this.selectModel(e.value),
+          value=this.model.id
+        )
+          each model in this.sortedModels
+            option(
+              [value]=model.id,
+              disabled=!model.enabled,
+            )= model.id
 
-      facade-select(
-        (select)=this.selectPersonality(e.value),
-        value=this.model.personalityId,
-      )
-        each personalityId in Object.keys(this.model.personalities || {})
-          option(
-            [value]=personalityId
-          )= this.model.personalities[personalityId].name
+      .labelled
+        label Personality (instructions)
+        facade-select(
+          (select)=this.selectPersonality(e.value),
+          value=this.model.personalityId,
+        )
+          each personalityId in Object.keys(this.model.personalities || {})
+            option(
+              [value]=personalityId
+            )= this.model.personalities[personalityId].name
 
     .group.b.checkboxes
       each context in Object.keys(this.model.contexts || {})
