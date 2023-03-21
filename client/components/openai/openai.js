@@ -126,7 +126,6 @@ export default class Openai extends HTMLElement {
   }
 
   async selectModel(id) {
-
     await this.loadModel(id)
     await this.setContexts()
     await this.selectPersonality()
@@ -170,7 +169,7 @@ export default class Openai extends HTMLElement {
 
     await this.updatePersonality(id)
 
-    this.instructions.value = this.model.personalities[id]
+    this.instructions.value = this.model.personalities[this.model.personalityId]
       ?.instructions
   }
 
