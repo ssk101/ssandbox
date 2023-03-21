@@ -9,21 +9,78 @@
   height: 100vh
   align-items: start
   grid-auto-rows: max-content
-  --input-height: 400px
+  --base-prompt-height: 200px
+  --border: 1px solid #444
+  --background-0: #111
+  --background-1: #1a1a1a
+  --background-2: #2a2a2a
+  --background-3: #3a3a3a
 
-.inputs,
+header
+  display: grid
+  grid-gap: .5em
+  grid-auto-rows: max-content
+  grid-column: span 2
+
+  .options
+    display: grid
+    grid-gap: .5em
+    grid-auto-flow: column
+    grid-auto-columns: max-content
+    box-sizing: border-box
+
+  .selects
+    display: grid
+    grid-gap: .5em
+    grid-auto-flow: column
+    justify-items: start
+
+  .checkboxes
+    display: flex
+    padding: .25em
+
+    .labelled
+      padding: .25em
+      margin: .25em
+      justify-items: center
+
+  .instructions
+    grid-row: 2
+    grid-column: span 2
+    height: 80px
+
+.pad
+  padding: .5em
+
+.group
+  border: var(--border)
+  box-sizing: border-box
+
+  &.a
+    background: var(--background-1)
+  &.b
+    background: var(--background-2)
+  &.c
+    background: var(--background-3)
+
+.prompt,
 .previews
   display: grid
-  grid-auto-flow: row
   grid-auto-rows: max-content
   grid-gap: 1em
 
-.inputs
+.prompt
   &:not([is-code='true'])
     grid-column: span 2
 
+    textarea.input
+      height: var(--base-prompt-height)
+
   &[is-code='true']
     grid-column: 1
+
+    textarea.input
+      height: calc(var(--base-prompt-height) * 2)
 
   .buttons
     display: grid
@@ -39,7 +96,7 @@
     display: grid
     grid-column: 2
 
-.labelled.response
+.response
   grid-column: span 2
 
 .labelled
@@ -53,26 +110,20 @@ label
 
 textarea
   width: 100%
-  background: #111
+  background: var(--background-0)
   color: #fff
   font-size: 13px
   box-sizing: border-box
   padding: .5em
   line-height: 14px
 
-  &.input
-    height: calc(var(--input-height) - 75px - 2em)
-
-  &.instruction
-    height: 75px
-
 [hidden='true']
   display: none
 
 pre
   width: 100%
-  border: 1px solid #444
-  background: #1a1a1a
+  border: var(--border)
+  background: var(--background-1)
   padding: .5em
   box-sizing: border-box
   margin: 0

@@ -7,6 +7,7 @@ import {
 import { wait } from '@steelskysoftware/facade-toolbox'
 import { IDB } from '@steelskysoftware/facade-client/src/lib/idb.js'
 import debounce from 'lodash/debounce'
+import merge from 'lodash/merge'
 import { OpenAI } from '../../models/openai.js'
 import IO from 'socket.io-client'
 import prismCSS from '../../lib/prism/prism.styl'
@@ -18,9 +19,12 @@ import '@steelskysoftware/facade-client/src/components/select/select.js'
 
 const { ws } = window.config
 
-const SOCKET = IO(`${ws.root}/${ws.namespace}/openai`, {
-  transports: ['websocket', 'polling', 'flashsocket']
-})
+const SOCKETS = ['openai', 'guesslang'].reduce((acc, namespace) => {
+  acc[namespace] = IO(`${ws.root}/${ws.namespace}/${namespace}`, {
+    transports: ['websocket']
+  })
+  return acc
+}, {})
 
 @Define('ss')
 @Template(template)
@@ -32,28 +36,20 @@ export default class Openai extends HTMLElement {
   }
 
   async connected() {
-    const models = await OpenAI.load('models')
+    const { filtered, personalities, contexts } = await OpenAI.load('models')
 
-    this.models = models
+    this.models = filtered
+    this.personalities = personalities
+    this.contexts = contexts
 
-    this.idb = await new IDB('openai')
-    const store = await this.idb.getOrCreateStore('modelSettings')
-    const selectedModel = await this.getModelSetting('model')
-    const defaultModel = this.models.filtered.find(model => model.default)
+    this.idb = await new IDB('openai', 3)
+    await this.idb.getOrCreateStore('settings')
 
-    this.model = this.models
-      .filtered
-      .find(model => model.id === selectedModel) || defaultModel
-
-    await this.setModelSetting('model', this.model.id)
-    await this.loadModel(this.model.id)
-
-    this.guesslang = debounce((namespace) => {
-      this._guesslang(namespace)
+    this.guesslang = debounce((namespace, opts = {}) => {
+      this._guesslang(namespace, opts)
     }, 1000)
 
     this.inputElement = this.shadowRoot.querySelector('textarea.input')
-    this.instructionElement = this.shadowRoot.querySelector('textarea.instruction')
     this.responseElement = this.shadowRoot.querySelector('pre.response code')
     this.inputPreviewElement = this.shadowRoot.querySelector('pre.preview code')
 
@@ -78,22 +74,28 @@ export default class Openai extends HTMLElement {
       },
     }
 
-    this.messages = await this.getModelSetting('messageHistory') || []
+    const selectedModelId = await this.getSetting('selectedModel')
+    await this.selectModel(selectedModelId || this.models.find(model => model.default).id)
     this.lastHighlight = Date.now() - 2000
     this.isResponding = false
     this.isGuesslanging = false
 
-    SOCKET.on('openai:response', (response) => {
+    SOCKETS.openai.on('response', (response) => {
       this.responseElement.textContent += response
       this.guesslang('response')
     })
 
-    SOCKET.on('openai:done', (response) => {
+    SOCKETS.openai.on('done', (response) => {
       this.isResponding = false
       this.render()
+      if(this.isCode) {
+        this.responseElement.textContent = this.responseElement
+          .textContent.replace(/(```(\w.*|)(\n|$))/gmi, '')
+      }
+      this.guesslang('response')
     })
 
-    SOCKET.on('guesslang:result', ({ error, result, namespace }) => {
+    SOCKETS.guesslang.on('result', ({ error, result, namespace }) => {
       this.isGuesslanging = false
 
       if(error) {
@@ -106,109 +108,100 @@ export default class Openai extends HTMLElement {
       }
     })
 
-
     this.render()
   }
 
   disconnected() {
-    SOCKET.emit('close')
-  }
-
-  async getModelSetting(key) {
-    return this.idb.get('modelSettings', key)
-  }
-
-  async setModelSetting(key, value) {
-    return this.idb.set('modelSettings', key, value)
-  }
-
-  async _guesslang(namespace) {
-    if(!this.isCode) return
-
-    const { source } = this.namespaces[namespace]
-    const code = source.value || source.textContent
-
-    if(!code) return
-
-    if(!this.isGuesslanging) {
-      this.isGuesslanging = true
-
-      SOCKET.emit('guesslang:guess', {
-        namespace,
-        code,
-      })
+    for(const socket of SOCKETS) {
+      SOCKETS[socket].emit('close')
     }
   }
 
-  highlight(namespace) {
-    if(!this.isCode) return
-
-    if(Date.now() - this.lastHighlight > 1000) {
-      this.lastHighlight = Date.now()
-      const { source, lang, target } = this.namespaces[namespace]
-      const prismLang = Prism.languages[lang]
-      const code = source.value || source.textContent
-
-      if(!code || !lang || !prismLang) return
-
-      const highlighted = Prism.highlight(code, prismLang, lang)
-      target.innerHTML = highlighted
-      target.className = `language-${lang}`
-      this.render()
-    }
+  async getSetting(key) {
+    return this.idb.get('settings', key)
   }
 
-  clearMessageHistory() {
-    return this.setModelSetting('messageHistory', [])
-    this.messages = []
+  async updateSetting(key, data) {
+    return this.idb.set('settings', key, data)
   }
 
-  clearInput() {
-    if(!this.inputElement) return
-    this.inputElement.value = ''
-    Object.assign(this.namespaces.input, { lang: null })
-  }
+  async selectModel(id) {
 
-  clearInstruction() {
-    if(!this.instructionElement) return
-    this.instructionElement.value = ''
+    await this.loadModel(id)
+    await this.setContexts()
+    await this.selectPersonality()
   }
 
   async loadModel(id) {
+    await this.updateSetting('selectedModel', id)
+
     const data = await OpenAI.load('model', { id })
 
     this.model = {
+      ...this.models.find(model => model.id === data.id),
       ...data,
-      ...this.models.filtered.find(model => model.id === data.id),
     }
 
-    await this.setModelSetting('model', id)
-
-    if(this.model.personalities?.length) {
-      const personalityName = (await this.getModelSetting('personality'))
-      await this.selectPersonality(personalityName)
-    }
-
-    console.log(this.model)
-
-    this.clearInstruction()
     this.render()
   }
 
-  async selectModel(e) {
-    await this.loadModel(e.value)
+  async setContexts() {
+    if(!this.model) return
+
+    const settings = await this.getModelSettings()
+
+    this.model.contexts = this.contexts.reduce((acc, cur) => {
+      acc[cur] = settings.contexts?.[cur] || false
+      return acc
+    }, {})
   }
 
-  async selectPersonality(personalityName = 'default') {
-    this.model.personality = personalityName
-    await this.setModelSetting('personality', personalityName)
+  async toggleContext(context, checked) {
+    this.model.contexts[context] = checked
+    await this.updateModelSettings({ contexts: this.model.contexts })
+  }
+
+  async selectPersonality(id) {
+    const settings = await this.getModelSettings()
+    const { messages = {}, personalityId } = settings
+    id ??= personalityId
+    this.messages = settings.messages?.[id] || []
     this.render()
+
+    await this.updatePersonality(id)
+
+    this.instructions.value = this.model.personalities[id]
+      ?.instructions
   }
 
-  getPersonality(personalityName) {
-    return this.model.personalities.find(personality => {
-      return personality.name === personalityName
+  async updatePersonality(id, instructions) {
+    await this.updateModelSettings({
+      personalityId: id,
+      ...instructions && { personalities: { [id]: { instructions } } }
     })
+  }
+
+  async getModelSettings() {
+    const settings = await this.idb.get('settings', this.model.id)
+    return settings || {}
+  }
+
+  async updateModelSettings(data = {}) {
+    const settings = await this.getModelSettings()
+    const newCustomModel = merge(settings, data)
+
+    this.model = merge(
+      {},
+      {
+        personalityId: 'default',
+        personalities: this.personalities,
+      },
+      this.model,
+      newCustomModel
+    )
+    this.render()
+
+    return this.idb.set('settings', this.model.id, newCustomModel)
   }
 
   onInput(e) {
@@ -224,6 +217,12 @@ export default class Openai extends HTMLElement {
     }
   }
 
+  async onInstructions(e) {
+    const instructions = (e.target.value || '').trim()
+    this.render()
+    await this.updatePersonality(this.model.personalityId, instructions)
+  }
+
   async submit() {
     if(!this.canSubmit) return
 
@@ -235,43 +234,29 @@ export default class Openai extends HTMLElement {
       id: this.model.id,
     }
 
-    if(this.isChat) {
-      this.messages.push({
-        role: 'user',
-        content: this.input,
+    const newMessages = [{
+      role: 'user',
+      content: this.input,
+    }]
+
+    const instructions = this.instructions?.value
+
+    payload.input = newMessages
+
+    if(this.model.personalityId && instructions) {
+      payload.input.unshift({
+        role: 'system',
+        content: instructions,
       })
-
-      const system = this.messages.find(message => message.role === 'system')
-
-      if(this.model.personality) {
-        const personality = this.getPersonality(this.model.personality)
-
-        if(!system || system.content !== personality.instructions) {
-          this.messages = this.messages.filter(message => {
-            return message.role !== 'system'
-          })
-
-          this.messages.unshift({
-            role: 'system',
-            content: personality.instructions,
-          })
-        }
-
-      }
-
-      payload.input = this.messages
-      localStorage.setItem('messages', JSON.stringify(this.messages))
-    } else {
-      payload.input = this.input
-
-      if(this.isEdit) {
-        payload.instruction = this.instruction
-      }
     }
+
+    this.messages = Array.from(new Set(this.messages.concat(newMessages)))
+
+    this.updateModelSettings({ messages: { [this.model.personalityId]: this.messages }})
 
     try {
       Object.assign(this.namespaces.response, { lang: null })
-      SOCKET.emit('openai:input', payload)
+      SOCKETS.openai.emit('input', payload)
     } catch (e) {
       console.error(e)
       this.render(this.isResponding = false)
@@ -296,37 +281,80 @@ export default class Openai extends HTMLElement {
     return this.namespaces?.[namespace]?.lang
   }
 
-  get input() {
-    return (this.inputElement?.value || '').trim()
+  async _guesslang(namespace) {
+    if(!this.isCode) return
+
+    const { source } = this.namespaces[namespace]
+    const code = source.value || source.textContent
+
+    if(!code) return
+
+
+
+    if(!this.isGuesslanging) {
+      this.isGuesslanging = true
+
+      SOCKETS.guesslang.emit('guess', {
+        namespace,
+        code,
+      })
+    }
   }
 
-  get instruction() {
-    return (this.instructionElement?.value || '').trim()
+  highlight(namespace) {
+    if(!this.isCode) return
+
+    if(Date.now() - this.lastHighlight > 1000) {
+      this.lastHighlight = Date.now()
+      const { source, lang, target } = this.namespaces[namespace]
+      const prismLang = Prism.languages[lang]
+      const code = source.value || source.textContent
+
+      if(!code || !lang || !prismLang) return
+
+      const highlighted = Prism.highlight(code, prismLang, lang)
+      target.innerHTML = highlighted
+      target.className = `language-${lang}`
+      this.render()
+    }
+  }
+
+  async clearMessageHistory() {
+    this.messages = []
+    const settings = await this.getModelSettings()
+    settings.messages[this.model.personalityId] = []
+    this.idb.set('settings', this.model.id, settings)
+  }
+
+  clearInput() {
+    if(!this.inputElement) return
+    this.inputElement.value = ''
+    Object.assign(this.namespaces.input, { lang: null })
+  }
+
+  get input() {
+    return (this.inputElement?.value || '').trim()
   }
 
   get canSubmit() {
     return this.input?.length && !this.isResponding
   }
 
-  get modelTypes() {
-    return this.model?.types || []
-  }
-
   get isChat() {
-    return this.modelTypes.includes('chat')
+    return !!this.model?.contexts?.chat
   }
 
   get isCode() {
-    return this.modelTypes.includes('code')
-  }
-
-  get isEdit() {
-    return this.modelTypes.includes('edit')
+    return !!this.model?.contexts?.code
   }
 
   get sortedModels() {
-    return this.models?.filtered?.sort((a, b) => {
+    return this.models?.sort((a, b) => {
       return a.id.localeCompare(b.id)
     }) || []
+  }
+
+  get instructions() {
+    return this.shadowRoot.querySelector('textarea.instructions')
   }
 }

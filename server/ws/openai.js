@@ -1,9 +1,11 @@
 import { openai, MODELS } from '../services/openai.js'
 import { createNamespace } from './server.js'
 
-createNamespace('openai', (socket, message, payload) => {
-  if(message === 'openai:input') {
-    input(socket, payload)
+await createNamespace('openai', {
+  eventCallback: (socket, message, payload) => {
+    if(message === 'input') {
+      input(socket, payload)
+    }
   }
 })
 
@@ -74,8 +76,8 @@ async function input(socket, payload) {
     const response = await openai[method](params, opts)
 
     if(!params.stream) {
-      socket.emit('openai:response', response.data.choices[0].text)
-      return socket.emit('openai:done')
+      socket.emit('response', response.data.choices[0].text)
+      return socket.emit('done')
     }
 
     response.data.on('data', data => {
@@ -86,7 +88,7 @@ async function input(socket, payload) {
         const message = line.replace(/^data: /, '')
 
         if(message === '[DONE]') {
-          return socket.emit('openai:done')
+          return socket.emit('done')
         }
 
         try {
@@ -94,11 +96,11 @@ async function input(socket, payload) {
           const content = parsed.delta?.content || parsed.text
 
           if(typeof content !== 'undefined') {
-            socket.emit('openai:response', content)
+            socket.emit('response', content)
           }
         } catch (error) {
           console.error({ message, error })
-          socket.emit('openai:error', { message, error })
+          socket.emit('error', { message, error })
         }
       }
     })
@@ -109,6 +111,6 @@ async function input(socket, payload) {
   } catch (e) {
     const { status, statusText } = e.response
     console.error({ status, statusText, input, instruction, id })
-    return socket.emit('openai:error', { status, statusText })
+    return socket.emit('error', { status, statusText })
   }
 }

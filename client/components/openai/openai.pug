@@ -1,39 +1,54 @@
-facade-select(
-  (select)=this.selectModel(e),
-  value=this.model.id
-)
-  each model in this.sortedModels
-    option(
-      [value]=model.id
-    )= model.id
+header
+  .group.pad.a.options
+    .group.pad.b.selects
+      facade-select(
+        (select)=this.selectModel(e.value),
+        value=this.model.id
+      )
+        each model in this.sortedModels
+          option(
+            [value]=model.id,
+            disabled=!model.enabled,
+          )= model.id
 
-if this.model.personalities
-  facade-select(
-    (select)=this.selectPersonality(e.value),
-    value=this.model.personality,
-  )
-    each personality in this.model.personalities
-      option(
-        [value]=personality.name
-      )= personality.name
+      facade-select(
+        (select)=this.selectPersonality(e.value),
+        value=this.model.personalityId,
+      )
+        each personalityId in Object.keys(this.model.personalities || {})
+          option(
+            [value]=personalityId
+          )= this.model.personalities[personalityId].name
 
-.inputs(is-code=this.isCode)
+    .group.b.checkboxes
+      each context in Object.keys(this.model.contexts || {})
+        .group.c.labelled
+          label= context
+          facade-input
+            input(
+              type='checkbox',
+              checked=this.model.contexts[context],
+              (input)=this.toggleContext(context, e.target.checked),
+            )
+
+  .group.pad.a
+    .labelled
+      label Instructions
+      textarea.instructions(
+        placeholder='Instructions',
+        autocomplete='off',
+        autocorrect='off',
+        spellcheck='true',
+        (input)=this.onInstructions(e),
+      )
+
+.group.pad.a.prompt(is-code=this.isCode)
   .labelled
-    label(for='input') Input
+    label Input
     textarea.input(
       id='input',
       placeholder='Prompt',
       (input)=this.onInput(e),
-      autocomplete='off',
-      autocorrect='off',
-      spellcheck='false',
-    )
-
-  .labelled(hidden=!this.isEdit)
-    label(for='instruction') Instruction
-    textarea.instruction(
-      id='instruction',
-      placeholder='Edit instruction (e.g. "Refactor this" or "Fix spelling mistakes")',
       autocomplete='off',
       autocorrect='off',
       spellcheck='false',
@@ -45,21 +60,21 @@ if this.model.personalities
       disabled=!this.canSubmit,
     ) Submit
 
-    if this.isChat
-      facade-button(
-        (click)=this.clearMessageHistory(),
-      ) Clear chat history
+    facade-button(
+      (click)=this.clearMessageHistory(),
+    ) Clear chat history
 
     .responding(hidden=!this.isResponding)= this.receivingResponseLabel()
 
-.previews(is-code=this.isCode)
+.group.pad.a.previews(is-code=this.isCode)
   .labelled
-    label(for='preview')= `Code ${this.langFor('input') ? '(best guess: ' + this.langFor('input') + ')' : ''}`
+    label= `Code ${this.langFor('input') ? '(best guess: ' + this.langFor('input') + ')' : ''}`
     pre.preview(id='preview')
       code(is-code=this.isCode)= this.input
 
-.labelled.response
-  label(for='response')= `Response ${this.langFor('response') ? '(best guess: ' + this.langFor('response') + ')' : ''}`
-  pre.response(id='response')
-    code(is-code=this.isCode).
-      Awaiting input...
+.group.pad.a.response
+  .labelled
+    label= `Response ${this.langFor('response') ? '(best guess: ' + this.langFor('response') + ')' : ''}`
+    pre.response(id='response')
+      code(is-code=this.isCode).
+        Awaiting input...

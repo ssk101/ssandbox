@@ -1,4 +1,9 @@
-import { openai, MODELS } from '../../services/openai.js'
+import {
+  openai,
+  MODELS,
+  PERSONALITIES,
+  CONTEXTS,
+} from '../../services/openai.js'
 import '../../ws/openai.js'
 import '../../ws/guesslang.js'
 
@@ -36,6 +41,8 @@ const routes = {
         return {
           all: data,
           filtered: MODELS,
+          personalities: PERSONALITIES,
+          contexts: CONTEXTS,
         }
       }
     ],

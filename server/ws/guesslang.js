@@ -1,10 +1,12 @@
 import { exec } from 'child_process'
 import { createNamespace } from './server.js'
 
-await createNamespace('guesslang', (socket, message, payload) => {
-  if(message === 'guesslang:guess') {
-    guesslang(socket, payload)
-  }
+await createNamespace('guesslang', {
+  eventCallback: (socket, message, payload) => {
+    if(message === 'guess') {
+      guesslang(socket, payload)
+    }
+  },
 })
 
 async function guesslang(socket, payload) {
@@ -13,7 +15,10 @@ async function guesslang(socket, payload) {
     code,
   } = payload
 
-  const formatted = code.trim()
+  const formatted = code
+    .replace(/(```(\w.*|)(\n|$))/gmi, '')
+    .trim()
+
   if(!formatted) return
 
   try {
@@ -24,17 +29,17 @@ async function guesslang(socket, payload) {
     ].join(' '), {}, (error, stdout, stderr) => {
       if(error) {
         console.error(error)
-        return socket.emit('guesslang:error', { error, namespace })
+        return socket.emit('error', { error, namespace })
       }
 
       const result = stdout.match(/(?<=Programming language: )(.*)/)[0]
         .trim()
         .toLowerCase()
 
-      socket.emit('guesslang:result', { result, namespace })
+      socket.emit('result', { result, namespace })
     })
   } catch (error) {
     console.error(error)
-    socket.emit('guesslang:error', { error, namespace })
+    socket.emit('error', { error, namespace })
   }
 }

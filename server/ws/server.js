@@ -8,8 +8,8 @@ const { ws } = config
 const socketServer = new SocketServer({ port: ws.port })
 await socketServer.createServer()
 
-export async function createNamespace(namespace, cb) {
-  const io = await socketServer.namespace(`/${ws.namespace}/${namespace}`, {
+export async function createNamespace(namespace, callbacks = {}) {
+  return socketServer.namespace(`/${ws.namespace}/${namespace}`, Object.assign({
     connectCallback: (socket) => {
       console.log(`${namespace}:${socket.id}`, 'connected')
     },
@@ -19,10 +19,5 @@ export async function createNamespace(namespace, cb) {
     disconnectCallback: (socket) => {
       console.log(`${namespace}:${socket.id}`, 'disconnected')
     },
-    eventCallback: async (socket, message, payload) => {
-      return cb(socket, message, payload)
-    }
-  })
-
-  return io
+  }, callbacks))
 }
