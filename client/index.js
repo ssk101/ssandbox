@@ -14,6 +14,15 @@ export const routes = [
     }
   },
   {
+    name: 'wireshark',
+    description: 'Wireshark filter builder',
+    path: '/wireshark',
+    async component(ctx) {
+      const { default: c } = await import(`./components/wireshark/wireshark.js`)
+      return c
+    }
+  },
+  {
     name: 'openai',
     description: 'Open AI API playground',
     path: '/openai',

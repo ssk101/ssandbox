@@ -31,55 +31,65 @@ const SOCKETS = ['openai', 'guesslang'].reduce((acc, namespace) => {
 @Styles([componentCSS, prismCSS])
 export default class Openai extends HTMLElement {
   created() {
-    this.models = []
-    this.model = {}
+    this.initPreRenderContext()
   }
 
   async connected() {
-    const { filtered, personalities, contexts } = await OpenAI.load('models')
+    this.initPostRenderContext()
+
+    await this.initIDB()
+    await this.loadAndPrepareModels()
+    await this.loadCurrentOrDefaultModel()
+
+    this.initSocketListeners()
+    this.initResizeObserver()
+
+    this.render()
+  }
+
+  disconnected() {
+    for(const socket of SOCKETS) {
+      SOCKETS[socket].emit('close')
+    }
+  }
+
+  async initIDB() {
+    this.idb = await new IDB('openai', 3)
+    await this.idb.getOrCreateStore('settings')
+  }
+
+  async loadAndPrepareModels() {
+    let modelsData
+
+    try {
+      modelsData = await OpenAI.load('models')
+
+    } catch (e) {
+      return console.error(e)
+    }
+
+    const { filtered, personalities, contexts } = modelsData
+
+    if(!filtered?.length) {
+      return console.error('No models were loadable! Aborting setup.')
+    }
 
     this.models = filtered
     this.personalities = personalities
     this.contexts = contexts
+  }
 
-    this.idb = await new IDB('openai', 3)
-    await this.idb.getOrCreateStore('settings')
-
-    this.guesslang = debounce((namespace, opts = {}) => {
-      this._guesslang(namespace, opts)
-    }, 1000)
-
-    this.inputElement = this.shadowRoot.querySelector('textarea.input')
-    this.responseElement = this.shadowRoot.querySelector('pre.response code')
-    this.inputPreviewElement = this.shadowRoot.querySelector('pre.preview code')
-
-    const _resize = debounce(height => {
-      this.shadowRoot.querySelector('pre.preview').style.height = `${height}px`
-    }, 50)
-
-    new ResizeObserver((entries) => {
-      _resize(entries[0].borderBoxSize[0].blockSize)
-    }).observe(this.inputElement)
-
-    this.namespaces = {
-      response: {
-        source: this.responseElement,
-        target: this.responseElement,
-        lang: null,
-      },
-      input: {
-        source: this.inputElement,
-        target: this.inputPreviewElement,
-        lang: null,
-      },
-    }
-
+  async loadCurrentOrDefaultModel() {
     const selectedModelId = await this.getSetting('selectedModel')
-    await this.selectModel(selectedModelId || this.models.find(model => model.default).id)
-    this.lastHighlight = Date.now() - 2000
-    this.isResponding = false
-    this.isGuesslanging = false
 
+    try {
+      await this.selectModel(selectedModelId || this.models.find(model => model.default).id)
+    } catch (e) {
+      throw e
+    }
+  }
+
+  initSocketListeners() {
     SOCKETS.openai.on('response', (response) => {
       this.responseElement.textContent += response
       this.guesslang('response')
@@ -103,17 +113,50 @@ export default class Openai extends HTMLElement {
       }
 
       if(result && namespace) {
-        this.namespaces[namespace].lang = result
+        this.textElements[namespace].lang = result
         this.highlight(namespace)
       }
     })
-
-    this.render()
   }
 
-  disconnected() {
-    for(const socket of SOCKETS) {
-      SOCKETS[socket].emit('close')
+  initResizeObserver() {
+    const _resize = debounce(height => {
+      this.shadowRoot.querySelector('pre.preview').style.height = `${height}px`
+    }, 50)
+
+    new ResizeObserver((entries) => {
+      _resize(entries[0].borderBoxSize[0].blockSize)
+    }).observe(this.inputElement)
+  }
+
+  initPreRenderContext() {
+    this.models = []
+    this.model = {}
+    this.lastHighlight = Date.now() - 2000
+    this.isResponding = false
+    this.isGuesslanging = false
+  }
+
+  initPostRenderContext() {
+    this.guesslang = debounce((namespace, opts = {}) => {
+      this._guesslang(namespace, opts)
+    }, 1000)
+
+    this.inputElement = this.shadowRoot.querySelector('textarea.input')
+    this.responseElement = this.shadowRoot.querySelector('pre.response code')
+    this.inputPreviewElement = this.shadowRoot.querySelector('pre.preview code')
+
+    this.textElements = {
+      response: {
+        source: this.responseElement,
+        target: this.responseElement,
+        lang: null,
+      },
+      input: {
+        source: this.inputElement,
+        target: this.inputPreviewElement,
+        lang: null,
+      },
     }
   }
 
@@ -208,7 +251,7 @@ export default class Openai extends HTMLElement {
 
     if(this.isCode) {
       if(!e.target.value) {
-        this.namespaces.input.target.innerHTML = ''
+        this.textElements.input.target.innerHTML = ''
         return
       }
 
@@ -254,7 +297,7 @@ export default class Openai extends HTMLElement {
     this.updateModelSettings({ messages: { [this.model.personalityId]: this.messages }})
 
     try {
-      Object.assign(this.namespaces.response, { lang: null })
+      Object.assign(this.textElements.response, { lang: null })
       SOCKETS.openai.emit('input', payload)
     } catch (e) {
       console.error(e)
@@ -277,18 +320,16 @@ export default class Openai extends HTMLElement {
   }
 
   langFor(namespace) {
-    return this.namespaces?.[namespace]?.lang
+    return this.textElements?.[namespace]?.lang
   }
 
   async _guesslang(namespace) {
     if(!this.isCode) return
 
-    const { source } = this.namespaces[namespace]
+    const { source } = this.textElements[namespace]
     const code = source.value || source.textContent
 
     if(!code) return
-
-
 
     if(!this.isGuesslanging) {
       this.isGuesslanging = true
@@ -305,7 +346,7 @@ export default class Openai extends HTMLElement {
 
     if(Date.now() - this.lastHighlight > 1000) {
       this.lastHighlight = Date.now()
-      const { source, lang, target } = this.namespaces[namespace]
+      const { source, lang, target } = this.textElements[namespace]
       const prismLang = Prism.languages[lang]
       const code = source.value || source.textContent
 
@@ -328,7 +369,7 @@ export default class Openai extends HTMLElement {
   clearInput() {
     if(!this.inputElement) return
     this.inputElement.value = ''
-    Object.assign(this.namespaces.input, { lang: null })
+    Object.assign(this.textElements.input, { lang: null })
   }
 
   get input() {
@@ -355,5 +396,9 @@ export default class Openai extends HTMLElement {
 
   get instructions() {
     return this.shadowRoot.querySelector('textarea.instructions')
+  }
+
+  get selectedPersonality() {
+    return this.personalities?.[this.model?.personalityId]
   }
 }

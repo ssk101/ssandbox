@@ -78,7 +78,8 @@ header
 
 .group.pad.a.response
   .labelled
-    label= `Response ${this.langFor('response') ? '(best guess: ' + this.langFor('response') + ')' : ''}`
+    - const label = this.langFor('response') ? `Best guess: ${this.langFor('response')}` : this.selectedPersonality?.name
+    label= label
     pre.response(id='response')
       code(is-code=this.isCode).
         Awaiting input...

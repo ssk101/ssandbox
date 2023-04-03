@@ -1,0 +1,24 @@
+facade-select(
+  (select)=this.selectFilter(e.value),
+  value=this.filter.name
+)
+  each filter in this.filters
+    option(
+      [value]=filter,
+    )= filter
+
+.input
+  input([value]=this.filter.name || '', (input)=this.filter.name = e.target.value)
+  facade-button((click)=this.updateFilter()) Add
+
+textarea(
+  [value]=this.filter.data || '',
+  (input)=(this.filter.data = e.target.value, this.updateFilter())
+)
+
+facade-button((click)=this.generateFilter()) Generate
+
+pre
+  code([innerHTML]=this.generatedFilter)
+
+facade-button((click)=this.copyToClip()) Copy
