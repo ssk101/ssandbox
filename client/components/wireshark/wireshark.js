@@ -60,7 +60,6 @@ export default class Wireshark extends HTMLElement {
   }
 
   generateFilter() {
-    const header = '!((string(eth.dst) && string(ip.dst) && string(ip.src) && string(ipv6.dst) && string(ipv6.src)) matches'
     const ipv4Header = '!(string(ip.addr) matches'
     const ipv6Header = '!(string(ipv6.addr) matches'
     const ipv4 = new Set()
