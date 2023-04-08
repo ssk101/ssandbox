@@ -33,6 +33,8 @@ export default class Wireshark extends HTMLElement {
       }
     }
 
+    this.render()
+
     this.generateFilter()
   }
 
@@ -42,7 +44,8 @@ export default class Wireshark extends HTMLElement {
   }
 
   async selectFilter(name) {
-    this.filter = await this.getFilter(name)
+    this.filter = { name, data: await this.getFilter(name) }
+    this.render()
     this.generateFilter()
   }
 
@@ -60,26 +63,37 @@ export default class Wireshark extends HTMLElement {
   }
 
   generateFilter() {
-    const ipv4Header = '!(string(ip.addr) matches'
-    const ipv6Header = '!(string(ipv6.addr) matches'
-    const ipv4 = new Set()
-    const ipv6 = new Set()
+    const IPv4Header = '!(string(ip.addr) matches'
+    const IPv6Header = '!(string(ipv6.addr) matches'
+    const IPv4 = new Set()
+    const IPv6 = new Set()
+
+    if(!this.filter?.data) return
 
     for(const line of this.filter.data.split('\n')) {
-      const replaced = line.replace(/(\.|:)/g, '\\\\$1').trim()
+      const matchedIPv4 = line
+        .match(/(?<=(\(|^))((\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}))(?=(\)|$))/)
+      const matchedIPv6 = line
+        .match(/(?<=^|\()((?:[0-9a-fA-F]{1,4}:{1,2}){1,8}[0-9a-fA-F]{1,4}|(?=(?:[0-9a-fA-F]{0,4}:{1,2}){0,7}[0-9a-fA-F]{0,4})(?:(:{1,2})|^)(([0-9a-fA-F]{1,4}(:{1,2})){1,7}|(:{1,2})){1,7}(?:(:{1,2})|$))(?=$|\))/)
 
-      if(!replaced) continue
+      let escaped
 
-      if(replaced.includes(':')) {
-        ipv6.add(replaced)
-      } else {
-        ipv4.add(replaced)
+      if(!matchedIPv4 && !matchedIPv6) continue
+
+      if(matchedIPv4?.length) {
+        escaped = matchedIPv4[0]
+          .replace(/(\.)/g, '\\\\$1')
+        IPv4.add(escaped)
+      } else if(matchedIPv6?.length) {
+        escaped = matchedIPv6[0]
+          .replace(/(:{1,2})/g, '\\\\$1')
+        IPv6.add(escaped)
       }
     }
 
     this.generatedFilter = [
-      ipv6.size && `${ipv6Header} "${Array.from(ipv6).join('|')}")`,
-      ipv4.size && `${ipv4Header} "${Array.from(ipv4).join('|')}")`,
+      IPv6.size && `${IPv6Header} "${Array.from(IPv6).join('|')}")`,
+      IPv4.size && `${IPv4Header} "${Array.from(IPv4).join('|')}")`,
     ]
       .filter(i => i)
       .join(' && ')
