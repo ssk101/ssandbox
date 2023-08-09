@@ -265,7 +265,7 @@ export default class Openai extends HTMLElement {
     await this.updatePersonality(this.model.personalityId, instructions)
   }
 
-  async submit() {
+  async submitPrompt() {
     if(!this.canSubmit) return
 
     this.isResponding = true
@@ -301,10 +301,17 @@ export default class Openai extends HTMLElement {
       SOCKETS.openai.emit('input', payload)
     } catch (e) {
       console.error(e)
+      this.abortResponse()
       this.render(this.isResponding = false)
     }
 
     this.render()
+  }
+
+  abortResponse() {
+    if(!this.isResponding) return
+    SOCKETS.openai.emit('abort')
+    this.render(this.isResponding = false)
   }
 
   receivingResponseLabel() {

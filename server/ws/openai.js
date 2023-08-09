@@ -1,10 +1,27 @@
 import { openai, MODELS } from '../services/openai.js'
 import { createNamespace } from './server.js'
 
+const RESPONSES = new Map()
+
+function endStream(socket, ...args) {
+  const response = RESPONSES.get(socket.id)
+
+  if(response) {
+    response.data.destroy()
+    RESPONSES.delete(socket.id)
+  }
+
+  return socket.emit(...args)
+}
+
 await createNamespace('openai', {
   eventCallback: (socket, message, payload) => {
     if(message === 'input') {
       input(socket, payload)
+    }
+
+    if(message === 'abort') {
+      return endStream(socket, 'aborting')
     }
   }
 })
@@ -74,10 +91,11 @@ async function input(socket, payload) {
 
   try {
     const response = await openai[method](params, opts)
+    RESPONSES.set(socket.id, response)
 
     if(!params.stream) {
       socket.emit('response', response.data.choices[0].text)
-      return socket.emit('done')
+      return endStream(socket, 'done')
     }
 
     response.data.on('data', data => {
@@ -88,7 +106,7 @@ async function input(socket, payload) {
         const message = line.replace(/^data: /, '')
 
         if(message === '[DONE]') {
-          return socket.emit('done')
+          return endStream(socket, 'done')
         }
 
         try {
@@ -100,7 +118,7 @@ async function input(socket, payload) {
           }
         } catch (error) {
           console.error({ message, error })
-          socket.emit('error', { message, error })
+          return endStream(socket, 'error', { message, error })
         }
       }
     })
@@ -109,8 +127,9 @@ async function input(socket, payload) {
       throw e
     })
   } catch (e) {
+    console.log(e)
     const { status, statusText } = e.response
     console.error({ status, statusText, input, instruction, id })
-    return socket.emit('error', { status, statusText })
+    return endStream(socket, 'error', { status, statusText })
   }
 }

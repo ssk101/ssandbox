@@ -15,6 +15,10 @@
   --background-1: #1a1a1a
   --background-2: #2a2a2a
   --background-3: #3a3a3a
+  --deactivate-bg: rgb(220, 155, 33)
+  --deactivate-fg: rgb(255,255,255)
+  --activate-bg: rgb(52, 159, 152)
+  --activate-fg: rgb(255,255,255)
 
 header
   display: grid
@@ -95,6 +99,14 @@ header
     grid-auto-flow: column
     grid-gap: 1em
     justify-content: start
+
+    .abort
+      --fa-button-background: var(--deactivate-bg)
+      --fa-button-color: var(--deactivate-fg)
+
+    .submit
+      --fa-button-background: var(--activate-bg)
+      --fa-button-color: var(--activate-fg)
 
 .previews
   &:not([is-code='true'])

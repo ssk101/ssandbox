@@ -59,10 +59,14 @@ header
     )
 
   .buttons
-    facade-button(
-      (click)=this.submit(),
+    facade-button.submit(
+      (click)=this.submitPrompt(),
       disabled=!this.canSubmit,
-    ) Submit
+    ) Submit Prompt
+    facade-button.abort(
+      (click)=this.abortResponse(),
+      disabled=!this.isResponding,
+    ) Abort Response
 
     facade-button(
       (click)=this.clearMessageHistory(),
